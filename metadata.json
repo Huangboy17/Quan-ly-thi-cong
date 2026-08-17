@@ -1,0 +1,6 @@
+{
+  "name": "QCQS ME-CK Acceptance & Payment Tracker",
+  "description": "Hệ thống realtime theo dõi nghiệm thu - thanh toán P.QCQS ME-CK với 8 điểm dừng, biểu đồ Gantt trực quan và 52 công trình mẫu.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

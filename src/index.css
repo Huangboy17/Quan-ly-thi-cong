@@ -1,0 +1,352 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer utilities {
+  .custom-scrollbar::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: #f1f5f9;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+
+  .dark .custom-scrollbar::-webkit-scrollbar-track {
+    background: #0f172a;
+  }
+  .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #334155;
+    border-radius: 4px;
+  }
+  .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #475569;
+  }
+
+  .shadow-left {
+    box-shadow: -4px 0 6px -1px rgba(0, 0, 0, 0.1);
+  }
+}
+
+/* Eye-safe Night Shift & Dark Mode System for Construction Site Workers */
+.dark {
+  color-scheme: dark;
+}
+
+.dark body {
+  background-color: #080d1a !important;
+  color: #f1f5f9 !important;
+}
+
+/* 1. Dark Surfaces & Elevational Hierarchy */
+.dark .bg-white {
+  background-color: #111a2e !important;
+  color: #f8fafc !important;
+}
+
+.dark .bg-slate-50,
+.dark .bg-slate-50\/90,
+.dark .bg-slate-50\/80,
+.dark .bg-slate-50\/70,
+.dark .bg-slate-50\/60,
+.dark .bg-slate-50\/40,
+.dark .bg-slate-50\/30,
+.dark .bg-slate-100,
+.dark .bg-slate-100\/90,
+.dark .bg-slate-100\/80 {
+  background-color: #0c1424 !important;
+  color: #e2e8f0 !important;
+}
+
+.dark .bg-slate-200,
+.dark .bg-slate-200\/90,
+.dark .bg-slate-200\/80,
+.dark .bg-slate-300 {
+  background-color: #1e293b !important;
+  color: #f8fafc !important;
+}
+
+/* 2. Structural Borders & Dividers */
+.dark .border-slate-200,
+.dark .border-slate-300,
+.dark .border-slate-200\/80,
+.dark .border-slate-200\/60,
+.dark .border-slate-100,
+.dark .border-slate-200\/90 {
+  border-color: #202d45 !important;
+}
+
+.dark .divide-slate-200 > :not([hidden]) ~ :not([hidden]),
+.dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #202d45 !important;
+}
+
+/* 3. High-Contrast Readable Typography */
+.dark .text-slate-900,
+.dark .text-slate-800 {
+  color: #f8fafc !important;
+}
+
+.dark .text-slate-700 {
+  color: #e2e8f0 !important;
+}
+
+.dark .text-slate-600 {
+  color: #cbd5e1 !important;
+}
+
+.dark .text-slate-500 {
+  color: #94a3b8 !important;
+}
+
+.dark .text-slate-400 {
+  color: #94a3b8 !important;
+}
+
+/* 4. Functional Semantic Colors in Dark Mode (Eliminates Dark-on-Dark Text) */
+
+/* Blue / Primary / General Contract Info */
+.dark .text-blue-950,
+.dark .text-blue-900,
+.dark .text-blue-800,
+.dark .text-blue-700 {
+  color: #60a5fa !important;
+}
+.dark .text-blue-600 {
+  color: #93c5fd !important;
+}
+.dark .bg-blue-50,
+.dark .bg-blue-50\/90,
+.dark .bg-blue-50\/80,
+.dark .bg-blue-50\/70,
+.dark .bg-blue-50\/60,
+.dark .bg-blue-50\/40,
+.dark .bg-blue-50\/30,
+.dark .bg-blue-100,
+.dark .bg-blue-100\/80 {
+  background-color: rgba(37, 99, 235, 0.2) !important;
+  color: #bfdbfe !important;
+}
+.dark .border-blue-200,
+.dark .border-blue-300 {
+  border-color: rgba(59, 130, 246, 0.4) !important;
+}
+
+/* Emerald / Success / Completed / Paid */
+.dark .text-emerald-950,
+.dark .text-emerald-900,
+.dark .text-emerald-800,
+.dark .text-emerald-700 {
+  color: #34d399 !important;
+}
+.dark .text-emerald-600 {
+  color: #6ee7b7 !important;
+}
+.dark .bg-emerald-50,
+.dark .bg-emerald-50\/90,
+.dark .bg-emerald-50\/80,
+.dark .bg-emerald-50\/70,
+.dark .bg-emerald-50\/60,
+.dark .bg-emerald-50\/40,
+.dark .bg-emerald-100,
+.dark .bg-emerald-100\/80 {
+  background-color: rgba(16, 185, 129, 0.2) !important;
+  color: #a7f3d0 !important;
+}
+.dark .border-emerald-200,
+.dark .border-emerald-300 {
+  border-color: rgba(16, 185, 129, 0.4) !important;
+}
+
+/* Amber / Warning / Pending / Submitting / Remaining */
+.dark .text-amber-950,
+.dark .text-amber-900,
+.dark .text-amber-800,
+.dark .text-amber-700 {
+  color: #fbbf24 !important;
+}
+.dark .text-amber-600 {
+  color: #fcd34d !important;
+}
+.dark .bg-amber-50,
+.dark .bg-amber-50\/90,
+.dark .bg-amber-50\/80,
+.dark .bg-amber-50\/70,
+.dark .bg-amber-50\/60,
+.dark .bg-amber-50\/40,
+.dark .bg-amber-100,
+.dark .bg-amber-100\/80 {
+  background-color: rgba(245, 158, 11, 0.2) !important;
+  color: #fef08a !important;
+}
+.dark .border-amber-200,
+.dark .border-amber-300 {
+  border-color: rgba(245, 158, 11, 0.4) !important;
+}
+
+/* Rose & Red / Overdue / Late Sign / Delayed / Critical */
+.dark .text-rose-950,
+.dark .text-rose-900,
+.dark .text-rose-800,
+.dark .text-rose-700,
+.dark .text-red-950,
+.dark .text-red-900,
+.dark .text-red-800,
+.dark .text-red-700 {
+  color: #f87171 !important;
+}
+.dark .text-rose-600,
+.dark .text-red-600 {
+  color: #fca5a5 !important;
+}
+.dark .bg-rose-50,
+.dark .bg-rose-50\/90,
+.dark .bg-rose-50\/80,
+.dark .bg-rose-50\/70,
+.dark .bg-rose-50\/40,
+.dark .bg-red-50,
+.dark .bg-red-50\/90,
+.dark .bg-red-50\/80,
+.dark .bg-red-50\/70,
+.dark .bg-red-50\/40,
+.dark .bg-rose-100,
+.dark .bg-red-100 {
+  background-color: rgba(239, 68, 68, 0.22) !important;
+  color: #fecaca !important;
+}
+.dark .border-rose-200,
+.dark .border-rose-300,
+.dark .border-red-200,
+.dark .border-red-300 {
+  border-color: rgba(239, 68, 68, 0.45) !important;
+}
+
+/* Purple & Indigo / Extended NT / Timelines / Charts */
+.dark .text-purple-950,
+.dark .text-purple-900,
+.dark .text-purple-800,
+.dark .text-purple-700,
+.dark .text-indigo-950,
+.dark .text-indigo-900,
+.dark .text-indigo-800,
+.dark .text-indigo-700 {
+  color: #c084fc !important;
+}
+.dark .text-purple-600,
+.dark .text-indigo-600 {
+  color: #d8b4fe !important;
+}
+.dark .bg-purple-50,
+.dark .bg-purple-50\/80,
+.dark .bg-indigo-50,
+.dark .bg-indigo-50\/80,
+.dark .bg-indigo-50\/40,
+.dark .bg-purple-100,
+.dark .bg-indigo-100 {
+  background-color: rgba(139, 92, 246, 0.2) !important;
+  color: #e9d5ff !important;
+}
+.dark .border-purple-200,
+.dark .border-purple-300,
+.dark .border-indigo-200,
+.dark .border-indigo-300 {
+  border-color: rgba(139, 92, 246, 0.4) !important;
+}
+
+/* 5. Master Table & Sticky Columns */
+.dark table {
+  background-color: #111a2e !important;
+}
+
+.dark thead tr {
+  background-color: #090f1d !important;
+  color: #f1f5f9 !important;
+}
+
+.dark tr td {
+  background-color: #111a2e;
+}
+
+.dark tr:hover td {
+  background-color: #17243d !important;
+}
+
+.dark tr.bg-blue-50\/80 td,
+.dark tr.bg-blue-50\/40 td {
+  background-color: #1a2947 !important;
+}
+
+/* Ensure sticky columns in table have solid opaque background */
+.dark td.sticky,
+.dark th.sticky {
+  background-color: #111a2e !important;
+}
+
+.dark tr:hover td.sticky {
+  background-color: #17243d !important;
+}
+
+.dark tr.bg-blue-50\/80 td.sticky,
+.dark tr.bg-blue-50\/40 td.sticky {
+  background-color: #1a2947 !important;
+}
+
+/* 6. Form Inputs & Interactive Controls */
+.dark input[type="text"]:not([class*="text-white"]):not([class*="bg-blue"]):not([class*="bg-emerald"]):not([class*="bg-indigo"]):not([class*="bg-amber"]),
+.dark input[type="number"]:not([class*="text-white"]):not([class*="bg-blue"]):not([class*="bg-emerald"]),
+.dark input[type="date"],
+.dark select,
+.dark textarea {
+  background-color: #0c1424 !important;
+  color: #f8fafc !important;
+  border-color: #27364f !important;
+}
+
+.dark select option {
+  background-color: #0c1424 !important;
+  color: #f8fafc !important;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #64748b !important;
+}
+
+/* 7. QCQS Milestone Interactive Cards in Dark Mode */
+.dark .group\/card {
+  background-color: #131e33;
+  border-color: #243552;
+}
+
+.dark .group\/card:hover {
+  background-color: #182742;
+  border-color: #3b82f6;
+}
+
+/* 8. Recharts & Visualizations in Dark Mode */
+.dark .recharts-cartesian-grid-horizontal line,
+.dark .recharts-cartesian-grid-vertical line {
+  stroke: #1f2d47 !important;
+}
+
+.dark .recharts-text {
+  fill: #94a3b8 !important;
+}
+
+.dark .recharts-legend-item-text {
+  color: #e2e8f0 !important;
+}
+
+.dark .recharts-default-tooltip {
+  background-color: #0f172a !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5) !important;
+}
+
