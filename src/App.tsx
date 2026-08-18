@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Project,
   ActiveNavMenu,
@@ -18,11 +18,23 @@ import {
   formatVND,
 } from './utils/helpers';
 import {
-  getBchActivityLogs,
-  saveBchActivityLog,
   generateSeedActivityLogs,
-  clearBchActivityLogs,
 } from './utils/activityLogs';
+import {
+  fetchProjects as sbFetchProjects,
+  upsertProject as sbUpsertProject,
+  upsertManyProjects as sbUpsertMany,
+  deleteProject as sbDeleteProject,
+  deleteManyProjects as sbDeleteMany,
+  replaceAllProjects as sbReplaceAll,
+  fetchActivityLogs as sbFetchLogs,
+  insertActivityLog as sbInsertLog,
+  insertManyActivityLogs as sbInsertManyLogs,
+  clearActivityLogs as sbClearLogs,
+  upsertUserProfile as sbUpsertUserProfile,
+  subscribeToProjects,
+  subscribeToActivityLogs,
+} from './services/supabaseService';
 import { exportProjectsToPdf, PdfColumnOptions } from './utils/exportPdf';
 import { Header } from './components/Header';
 import { TopFilterToolbar } from './components/TopFilterToolbar';
@@ -41,8 +53,6 @@ import { PdfExportModal, DEFAULT_PDF_COLUMN_OPTIONS } from './components/PdfExpo
 import { UserProfileModal, getSavedUserProfile, saveUserProfileToStorage } from './components/UserProfileModal';
 import { Toast } from './components/Toast';
 import { Building2 } from 'lucide-react';
-
-const LOCAL_STORAGE_KEY = 'cvb_qcqs_projects_v2';
 
 export default function App() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -146,61 +156,92 @@ export default function App() {
     });
   };
 
-  // Load initial data, user profile, and BCH activity logs
+  // ═══ SUPABASE: Load initial data from cloud ═══
+  const loadProjectsFromSupabase = useCallback(async () => {
+    try {
+      const data = await sbFetchProjects();
+      if (data.length > 0) {
+        setProjects(data);
+      } else {
+        // DB rỗng → nạp 52 mẫu lên Supabase
+        const samples = generate52SampleProjects();
+        setProjects(samples);
+        await sbReplaceAll(samples);
+        console.log('✅ Đã nạp 52 dự án mẫu lên Supabase');
+      }
+    } catch (e) {
+      console.error('❌ Lỗi tải dữ liệu từ Supabase:', e);
+    }
+  }, []);
+
+  const loadLogsFromSupabase = useCallback(async () => {
+    try {
+      const logs = await sbFetchLogs();
+      if (logs.length > 0) {
+        setBchLogs(logs);
+      } else {
+        // Seed logs nếu DB rỗng
+        const seedLogs = generateSeedActivityLogs(projects);
+        if (seedLogs.length > 0) {
+          await sbInsertManyLogs(seedLogs);
+          setBchLogs(seedLogs);
+          console.log('✅ Đã nạp nhật ký mẫu BCH lên Supabase');
+        }
+      }
+    } catch (e) {
+      console.error('❌ Lỗi tải nhật ký từ Supabase:', e);
+    }
+  }, [projects]);
+
   useEffect(() => {
+    // Load user profile from localStorage (offline-first)
     const savedUser = getSavedUserProfile();
     if (savedUser) {
       setUserProfile(savedUser);
     }
 
-    let loadedProjects: Project[] = [];
-    try {
-      const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          loadedProjects = parsed;
-          setProjects(parsed);
-        }
-      }
-    } catch (e) {
-      console.warn('Failed to parse local storage', e);
-    }
-
-    if (loadedProjects.length === 0) {
-      const samples = generate52SampleProjects();
-      loadedProjects = samples;
-      setProjects(samples);
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(samples));
-    }
-
-    // Load or Seed BCH Activity Logs
-    const existingLogs = getBchActivityLogs();
-    if (existingLogs && existingLogs.length > 0) {
-      setBchLogs(existingLogs);
-    } else {
-      const initialLogs = generateSeedActivityLogs(loadedProjects);
-      initialLogs.forEach((log) => saveBchActivityLog(log));
-      setBchLogs(getBchActivityLogs());
-    }
+    // Load data from Supabase
+    loadProjectsFromSupabase();
+    loadLogsFromSupabase();
   }, []);
 
-  // Log activity helper
+  // ═══ SUPABASE: Realtime subscription ═══
+  useEffect(() => {
+    const unsubProjects = subscribeToProjects(() => {
+      console.log('🔄 Realtime: projects changed, reloading...');
+      loadProjectsFromSupabase();
+    });
+    const unsubLogs = subscribeToActivityLogs(() => {
+      console.log('🔄 Realtime: logs changed, reloading...');
+      loadLogsFromSupabase();
+    });
+
+    return () => {
+      unsubProjects();
+      unsubLogs();
+    };
+  }, [loadProjectsFromSupabase, loadLogsFromSupabase]);
+
+  // Log activity helper — ghi vào Supabase
   const logBchAction = (
     logInput: Omit<BchActivityLog, 'id' | 'timestamp'> & { timestamp?: string }
   ) => {
-    const newLog = saveBchActivityLog(logInput);
+    const newLog: BchActivityLog = {
+      ...logInput,
+      id: `bch_log_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+      timestamp: logInput.timestamp || new Date().toISOString(),
+    };
     setBchLogs((prev) => [newLog, ...prev]);
+    sbInsertLog(newLog).catch((e) => console.error('❌ Lỗi lưu log:', e));
   };
 
-  // Save projects to localStorage on change
+  // Save projects — ghi vào Supabase (thay localStorage)
   const saveProjects = (newProjects: Project[]) => {
     setProjects(newProjects);
-    try {
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(newProjects));
-    } catch (e) {
-      console.error('Failed to save to local storage', e);
-    }
+    // Đồng bộ toàn bộ lên Supabase
+    sbUpsertMany(newProjects).catch((e) =>
+      console.error('❌ Lỗi đồng bộ projects lên Supabase:', e)
+    );
   };
 
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
@@ -401,7 +442,8 @@ export default function App() {
       message: `Bạn có chắc chắn muốn xóa hợp đồng ${target?.soHopDong || ''} (${target?.tenCongTrinh || ''}) khỏi hệ thống?`,
       onConfirm: () => {
         const next = projects.filter((p) => p.id !== id);
-        saveProjects(next);
+        setProjects(next);
+        sbDeleteProject(id).catch((e) => console.error('❌ Lỗi xóa project:', e));
         setConfirmState((prev) => ({ ...prev, isOpen: false }));
         showToast('Đã xóa hợp đồng khỏi hệ thống!', 'success');
 
@@ -430,15 +472,23 @@ export default function App() {
       title: 'Khởi tạo lại 52 Hợp Đồng Mẫu',
       message:
         'Hành động này sẽ nạp lại toàn bộ 52 hợp đồng mẫu chuẩn hóa với đầy đủ số liệu tài chính, phân bổ dự án và 8 mốc nghiệm thu QCQS. Bạn có muốn tiếp tục?',
-      onConfirm: () => {
-        const samples = generate52SampleProjects();
-        saveProjects(samples);
-        const seedLogs = generateSeedActivityLogs(samples);
-        clearBchActivityLogs();
-        seedLogs.forEach((l) => saveBchActivityLog(l));
-        setBchLogs(getBchActivityLogs());
-        setConfirmState((prev) => ({ ...prev, isOpen: false }));
-        showToast('Đã nạp lại 52 hợp đồng mẫu & lịch sử Ban Chỉ Huy thành công!');
+      onConfirm: async () => {
+        try {
+          const samples = generate52SampleProjects();
+          setProjects(samples);
+          await sbReplaceAll(samples);
+
+          const seedLogs = generateSeedActivityLogs(samples);
+          await sbClearLogs();
+          await sbInsertManyLogs(seedLogs);
+          setBchLogs(seedLogs);
+
+          setConfirmState((prev) => ({ ...prev, isOpen: false }));
+          showToast('Đã nạp lại 52 hợp đồng mẫu & lịch sử Ban Chỉ Huy lên Supabase thành công!');
+        } catch (e) {
+          console.error('❌ Lỗi reset sample data:', e);
+          showToast('Có lỗi khi nạp dữ liệu mẫu!', 'error');
+        }
       },
     });
   };
@@ -544,7 +594,8 @@ export default function App() {
     if (!projectIds.length) return;
     const deletedProjects = projects.filter((p) => projectIds.includes(p.id));
     const next = projects.filter((p) => !projectIds.includes(p.id));
-    saveProjects(next);
+    setProjects(next);
+    sbDeleteMany(projectIds).catch((e) => console.error('❌ Lỗi bulk delete:', e));
     showToast(`Đã xóa thành công ${projectIds.length} hợp đồng khỏi hệ thống!`);
 
     const officerName = userProfile?.fullName || 'Cán bộ Ban Chỉ Huy';
@@ -833,7 +884,7 @@ export default function App() {
                 showToast('Đã lưu nhật ký hoạt động Ban Chỉ Huy thành công!');
               }}
               onClearLogs={() => {
-                clearBchActivityLogs();
+                sbClearLogs().catch((e) => console.error('❌ Lỗi xóa logs:', e));
                 setBchLogs([]);
                 showToast('Đã xóa toàn bộ lịch sử hoạt động Ban Chỉ Huy!');
               }}
@@ -885,6 +936,8 @@ export default function App() {
         initialProfile={userProfile}
         onSaveProfile={(profile) => {
           setUserProfile(profile);
+          saveUserProfileToStorage(profile);
+          sbUpsertUserProfile(profile).catch((e) => console.error('❌ Lỗi lưu profile:', e));
           setIsUserProfileModalOpen(false);
           showToast(`Xin chào ${profile.fullName} (${profile.role})! Đã lưu thông tin cán bộ.`);
         }}
