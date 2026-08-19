@@ -265,84 +265,6 @@ export default function App() {
     }
   }, [userProfile?.accountType]);
 
-  // Nếu đang tải Auth, hiển thị loading
-  if (authLoading) {
-    return <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 text-slate-500">Đang tải dữ liệu hệ thống...</div>;
-  }
-
-  // Nếu chưa đăng nhập, hiển thị AuthForm
-  if (!session) {
-    return <AuthForm onSuccess={() => {}} />;
-  }
-
-  // Cảnh báo trạng thái tài khoản
-  if (userProfile?.status === 'pending') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 p-4">
-        <div className="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-xl max-w-md w-full text-center border border-amber-200 dark:border-amber-900/50">
-          <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-500 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Building2 className="w-8 h-8" />
-          </div>
-          <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">Đang chờ phê duyệt</h2>
-          <p className="text-slate-600 dark:text-slate-400 mb-6">
-            Tài khoản của bạn đã được ghi nhận và đang chờ Super Admin phê duyệt. Vui lòng quay lại sau!
-          </p>
-          <button onClick={() => supabase.auth.signOut()} className="text-blue-600 font-medium hover:underline">
-            Đăng xuất
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (userProfile?.status === 'locked' || userProfile?.status === 'rejected') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 p-4">
-        <div className="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-xl max-w-md w-full text-center border border-rose-200 dark:border-rose-900/50">
-          <div className="w-16 h-16 bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-500 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Building2 className="w-8 h-8" />
-          </div>
-          <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">Tài khoản đã bị khóa/từ chối</h2>
-          <p className="text-slate-600 dark:text-slate-400 mb-6">
-            Tài khoản của bạn không được phép truy cập hệ thống lúc này. Vui lòng liên hệ quản trị viên.
-          </p>
-          <button onClick={() => supabase.auth.signOut()} className="text-blue-600 font-medium hover:underline">
-            Đăng xuất
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // Log activity helper — ghi vào Supabase
-  const logBchAction = (
-    logInput: Omit<BchActivityLog, 'id' | 'timestamp'> & { timestamp?: string }
-  ) => {
-    const newLog: BchActivityLog = {
-      ...logInput,
-      id: `bch_log_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
-      timestamp: logInput.timestamp || new Date().toISOString(),
-    };
-    setBchLogs((prev) => [newLog, ...prev]);
-    sbInsertLog(newLog).catch((e) => console.error('❌ Lỗi lưu log:', e));
-  };
-
-  // Save projects — ghi vào Supabase (thay localStorage)
-  const saveProjects = (newProjects: Project[]) => {
-    setProjects(newProjects);
-    // Đồng bộ toàn bộ lên Supabase
-    sbUpsertMany(newProjects).catch((e) =>
-      console.error('❌ Lỗi đồng bộ projects lên Supabase:', e)
-    );
-  };
-
-  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
-    setToast({ message, type, isVisible: true });
-    setTimeout(() => {
-      setToast((prev) => ({ ...prev, isVisible: false }));
-    }, 3200);
-  };
-
   // Filtered projects according to global filter + global search
   const filteredProjects = useMemo(() => {
     const query = searchQuery.toLowerCase().trim();
@@ -441,12 +363,90 @@ export default function App() {
 
       return true;
     });
-  }, [projects, searchQuery, globalFilter]);
+  }, [projects, searchQuery, globalFilter, selectedContractId]);
 
   // Total payments count
   const totalPaymentsCount = useMemo(() => {
     return projects.reduce((acc, p) => acc + (p.paymentBatches?.length || 3), 0);
   }, [projects]);
+
+  // Nếu đang tải Auth, hiển thị loading
+  if (authLoading) {
+    return <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 text-slate-500">Đang tải dữ liệu hệ thống...</div>;
+  }
+
+  // Nếu chưa đăng nhập, hiển thị AuthForm
+  if (!session) {
+    return <AuthForm onSuccess={() => {}} />;
+  }
+
+  // Cảnh báo trạng thái tài khoản
+  if (userProfile?.status === 'pending') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 p-4">
+        <div className="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-xl max-w-md w-full text-center border border-amber-200 dark:border-amber-900/50">
+          <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-500 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Building2 className="w-8 h-8" />
+          </div>
+          <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">Đang chờ phê duyệt</h2>
+          <p className="text-slate-600 dark:text-slate-400 mb-6">
+            Tài khoản của bạn đã được ghi nhận và đang chờ Super Admin phê duyệt. Vui lòng quay lại sau!
+          </p>
+          <button onClick={() => supabase.auth.signOut()} className="text-blue-600 font-medium hover:underline">
+            Đăng xuất
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (userProfile?.status === 'locked' || userProfile?.status === 'rejected') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 p-4">
+        <div className="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-xl max-w-md w-full text-center border border-rose-200 dark:border-rose-900/50">
+          <div className="w-16 h-16 bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-500 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Building2 className="w-8 h-8" />
+          </div>
+          <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">Tài khoản đã bị khóa/từ chối</h2>
+          <p className="text-slate-600 dark:text-slate-400 mb-6">
+            Tài khoản của bạn không được phép truy cập hệ thống lúc này. Vui lòng liên hệ quản trị viên.
+          </p>
+          <button onClick={() => supabase.auth.signOut()} className="text-blue-600 font-medium hover:underline">
+            Đăng xuất
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Log activity helper — ghi vào Supabase
+  const logBchAction = (
+    logInput: Omit<BchActivityLog, 'id' | 'timestamp'> & { timestamp?: string }
+  ) => {
+    const newLog: BchActivityLog = {
+      ...logInput,
+      id: `bch_log_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+      timestamp: logInput.timestamp || new Date().toISOString(),
+    };
+    setBchLogs((prev) => [newLog, ...prev]);
+    sbInsertLog(newLog).catch((e) => console.error('❌ Lỗi lưu log:', e));
+  };
+
+  // Save projects — ghi vào Supabase (thay localStorage)
+  const saveProjects = (newProjects: Project[]) => {
+    setProjects(newProjects);
+    // Đồng bộ toàn bộ lên Supabase
+    sbUpsertMany(newProjects).catch((e) =>
+      console.error('❌ Lỗi đồng bộ projects lên Supabase:', e)
+    );
+  };
+
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
+    setToast({ message, type, isVisible: true });
+    setTimeout(() => {
+      setToast((prev) => ({ ...prev, isVisible: false }));
+    }, 3200);
+  };
 
   // Handler Actions
   const handleOpenAddContract = () => {

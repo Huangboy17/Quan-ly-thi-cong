@@ -7,6 +7,14 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      window.addEventListener('error', function(e) {
+        document.body.innerHTML += '<div style="color:red; padding:20px; position:absolute; z-index:9999; background:white; top:0; left:0; right:0;"><b>RUNTIME ERROR:</b> ' + e.message + '<br/><pre>' + e.error?.stack + '</pre></div>';
+      });
+      window.addEventListener('unhandledrejection', function(e) {
+        document.body.innerHTML += '<div style="color:red; padding:20px; position:absolute; z-index:9999; background:white; top:0; left:0; right:0;"><b>UNHANDLED PROMISE:</b> ' + e.reason + '</div>';
+      });
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
