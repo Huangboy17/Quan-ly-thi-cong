@@ -14,6 +14,7 @@ import {
   History,
   Moon,
   Sun,
+  LogOut,
 } from 'lucide-react';
 import { UserProfile } from '../types';
 
@@ -37,6 +38,7 @@ interface HeaderProps {
   activePresenceCount?: number;
   isDarkMode?: boolean;
   onToggleDarkMode?: () => void;
+  onLogout?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -59,6 +61,7 @@ export const Header: React.FC<HeaderProps> = ({
   activePresenceCount = 6,
   isDarkMode = false,
   onToggleDarkMode,
+  onLogout,
 }) => {
   return (
     <header className="bg-white text-slate-800 sticky top-0 z-40 border-b border-slate-200 shadow-sm backdrop-blur-md transition-colors duration-200">
@@ -193,6 +196,17 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
             <span className="md:hidden font-bold text-[11px]">BCH</span>
           </button>
+
+          {onLogout && (
+            <button
+              onClick={onLogout}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-xs transition cursor-pointer shadow-xs active:scale-95 group"
+              title="Đăng xuất khỏi hệ thống"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline font-bold">Đăng xuất</span>
+            </button>
+          )}
 
           <button
             onClick={onExportExcel}

@@ -47,6 +47,7 @@ import { BchActivityView } from './components/BchActivityView';
 import { AdminDashboard } from './components/admin/AdminDashboard';
 import { MemberManager } from './components/level1/MemberManager';
 import { AuthForm } from './components/AuthForm';
+import { ResetPassword } from './components/ResetPassword';
 import { supabase } from './lib/supabase';
 import { ActiveOfficersSidebar } from './components/ActiveOfficersSidebar';
 import { ProjectModal } from './components/ProjectModal';
@@ -213,13 +214,32 @@ export default function App() {
     });
 
     // Listen for changes on auth state
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
-      if (session?.user) {
-        loadUserProfile(session.user.id);
-      } else {
+      if (event === 'SIGNED_OUT') {
         setUserProfile(null);
+        setProjects([]);
+        setBchLogs([]);
         setAuthLoading(false);
+      } else if (event === 'PASSWORD_RECOVERY') {
+        // Recovery sets a session, we let it load profile or we can just proceed
+        if (session?.user) {
+          loadUserProfile(session.user.id);
+        } else {
+          setAuthLoading(false);
+        }
+      } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+        if (session?.user) {
+          loadUserProfile(session.user.id);
+        }
+      } else {
+        // fallback
+        if (session?.user) {
+          loadUserProfile(session.user.id);
+        } else {
+          setUserProfile(null);
+          setAuthLoading(false);
+        }
       }
     });
 
@@ -369,6 +389,27 @@ export default function App() {
   const totalPaymentsCount = useMemo(() => {
     return projects.reduce((acc, p) => acc + (p.paymentBatches?.length || 3), 0);
   }, [projects]);
+
+  const isResetPasswordRoute = window.location.pathname === '/reset-password';
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      setSession(null);
+      setUserProfile(null);
+      setProjects([]);
+      setBchLogs([]);
+      setActiveMenu('DASHBOARD');
+      showToast('Đã đăng xuất thành công!');
+    } catch (e: any) {
+      console.error('Lỗi đăng xuất:', e);
+      showToast('Có lỗi xảy ra khi đăng xuất!', 'error');
+    }
+  };
+
+  if (isResetPasswordRoute) {
+    return <ResetPassword />;
+  }
 
   // Nếu đang tải Auth, hiển thị loading
   if (authLoading) {
@@ -863,6 +904,7 @@ export default function App() {
         activePresenceCount={6}
         isDarkMode={isDarkMode}
         onToggleDarkMode={handleToggleDarkMode}
+        onLogout={handleLogout}
       />
 
       {/* 2. Top Filter Toolbar (Thời gian, Dự án, Nhóm CP, Nhà thầu, Chủ Đầu Tư, Địa Phương, Doanh Thu) */}

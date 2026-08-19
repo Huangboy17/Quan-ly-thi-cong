@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { signUpUser, signInUser } from '../services/supabaseService';
+import { supabase } from '../lib/supabase';
 import { Shield, Mail, Lock, User, AlertCircle, Loader2, CheckCircle2 } from 'lucide-react';
 
 interface AuthFormProps {
@@ -7,7 +8,7 @@ interface AuthFormProps {
 }
 
 export const AuthForm: React.FC<AuthFormProps> = ({ onSuccess }) => {
-  const [isLogin, setIsLogin] = useState(true);
+  const [mode, setMode] = useState<'login' | 'register' | 'forgot_password'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
@@ -22,16 +23,22 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onSuccess }) => {
     setLoading(true);
 
     try {
-      if (isLogin) {
+      if (mode === 'login') {
         await signInUser(email, password);
         onSuccess();
-      } else {
+      } else if (mode === 'register') {
         if (!fullName.trim()) {
           throw new Error('Vui lòng nhập Họ và Tên');
         }
         await signUpUser(email, password, fullName);
         setMessage('Đăng ký thành công! Vui lòng chờ Super Admin phê duyệt tài khoản.');
-        setIsLogin(true);
+        setMode('login');
+      } else if (mode === 'forgot_password') {
+        const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/reset-password`,
+        });
+        if (resetError) throw resetError;
+        setMessage('Nếu email tồn tại trong hệ thống, liên kết đặt lại mật khẩu đã được gửi.');
       }
     } catch (err: any) {
       setError(err.message || 'Có lỗi xảy ra. Vui lòng thử lại.');
@@ -47,9 +54,13 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onSuccess }) => {
           <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mx-auto mb-4 backdrop-blur-md">
             <Shield className="w-6 h-6 text-white" />
           </div>
-          <h2 className="text-2xl font-bold">Hệ Thống Quản Lý</h2>
+          <h2 className="text-2xl font-bold">
+            {mode === 'forgot_password' ? 'Quên mật khẩu' : 'Hệ Thống Quản Lý'}
+          </h2>
           <p className="text-blue-100 mt-1 text-sm">
-            {isLogin ? 'Đăng nhập để tiếp tục' : 'Đăng ký tài khoản mới'}
+            {mode === 'login' && 'Đăng nhập để tiếp tục'}
+            {mode === 'register' && 'Đăng ký tài khoản mới'}
+            {mode === 'forgot_password' && 'Nhập email tài khoản của bạn. Chúng tôi sẽ gửi liên kết để đặt lại mật khẩu.'}
           </p>
         </div>
 
@@ -68,7 +79,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onSuccess }) => {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {!isLogin && (
+            {mode === 'register' && (
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                   Họ và Tên Tổ chức/Cá nhân
@@ -104,23 +115,36 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onSuccess }) => {
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                Mật khẩu
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <input
-                  type="password"
-                  required
-                  minLength={6}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-[#111a2e] border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all dark:text-white"
-                  placeholder="••••••••"
-                />
+            {mode !== 'forgot_password' && (
+              <div>
+                <div className="flex justify-between mb-1">
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                    Mật khẩu
+                  </label>
+                  {mode === 'login' && (
+                    <button
+                      type="button"
+                      onClick={() => setMode('forgot_password')}
+                      className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                    >
+                      Quên mật khẩu?
+                    </button>
+                  )}
+                </div>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input
+                    type="password"
+                    required
+                    minLength={6}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-[#111a2e] border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all dark:text-white"
+                    placeholder="••••••••"
+                  />
+                </div>
               </div>
-            </div>
+            )}
 
             <button
               type="submit"
@@ -128,16 +152,25 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onSuccess }) => {
               className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-md shadow-blue-500/20 transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed mt-2"
             >
               {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-              {isLogin ? 'Đăng nhập' : 'Đăng ký tài khoản'}
+              {mode === 'login' && 'Đăng nhập'}
+              {mode === 'register' && 'Đăng ký tài khoản'}
+              {mode === 'forgot_password' && 'Gửi liên kết đặt lại mật khẩu'}
             </button>
           </form>
 
           <div className="mt-6 text-center text-sm text-slate-500 dark:text-slate-400">
-            {isLogin ? (
+            {mode === 'forgot_password' ? (
+              <button
+                onClick={() => setMode('login')}
+                className="text-blue-600 dark:text-blue-400 font-medium hover:underline"
+              >
+                ← Quay lại đăng nhập
+              </button>
+            ) : mode === 'login' ? (
               <p>
                 Chưa có tài khoản?{' '}
                 <button
-                  onClick={() => setIsLogin(false)}
+                  onClick={() => setMode('register')}
                   className="text-blue-600 dark:text-blue-400 font-medium hover:underline"
                 >
                   Đăng ký ngay
@@ -147,7 +180,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onSuccess }) => {
               <p>
                 Đã có tài khoản?{' '}
                 <button
-                  onClick={() => setIsLogin(true)}
+                  onClick={() => setMode('login')}
                   className="text-blue-600 dark:text-blue-400 font-medium hover:underline"
                 >
                   Đăng nhập
