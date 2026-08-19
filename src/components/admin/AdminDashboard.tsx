@@ -12,6 +12,7 @@ export const AdminDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [selectedProfile, setSelectedProfile] = useState<UserProfile | null>(null);
+  const [editingProfile, setEditingProfile] = useState<UserProfile | null>(null);
 
   useEffect(() => {
     loadProfiles();
@@ -173,6 +174,7 @@ export const AdminDashboard: React.FC = () => {
                             onBlock={(e) => handleUpdateStatus(e, p.id!, 'blocked')}
                             onArchive={(e) => handleUpdateStatus(e, p.id!, 'archived')}
                             onUnlock={(e) => handleUpdateStatus(e, p.id!, 'active')}
+                            onEdit={(e) => { e.stopPropagation(); setEditingProfile(p); }}
                             currentStatus={p.status}
                           />
                         </div>
@@ -193,6 +195,19 @@ export const AdminDashboard: React.FC = () => {
           allProfiles={profiles}
           onClose={() => setSelectedProfile(null)}
           onUpdateStatus={handleUpdateStatus}
+        />
+      )}
+
+      {/* Edit Profile Modal */}
+      {editingProfile && (
+        <EditProfileModal
+          profile={editingProfile}
+          allProfiles={profiles}
+          onClose={() => setEditingProfile(null)}
+          onSuccess={async () => {
+            setEditingProfile(null);
+            await loadProfiles();
+          }}
         />
       )}
     </div>
@@ -226,7 +241,7 @@ const StatusBadge = ({ status }: { status?: string }) => {
   }
 };
 
-const DropdownActions = ({ onApprove, onBlock, onArchive, onUnlock, currentStatus }: any) => {
+const DropdownActions = ({ onApprove, onBlock, onArchive, onUnlock, onEdit, currentStatus }: any) => {
   const [open, setOpen] = useState(false);
   return (
     <div className="relative">
@@ -240,6 +255,11 @@ const DropdownActions = ({ onApprove, onBlock, onArchive, onUnlock, currentStatu
         <>
           <div className="fixed inset-0 z-10" onClick={(e) => { e.stopPropagation(); setOpen(false); }} />
           <div className="absolute right-0 mt-1 w-36 bg-white dark:bg-[#1a233a] border border-slate-200 dark:border-slate-700 rounded-md shadow-lg z-20 py-1 flex flex-col text-[13px]">
+            {onEdit && (
+              <button onClick={(e) => { setOpen(false); onEdit(e); }} className="text-left px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 text-blue-600 flex items-center gap-2">
+                <Shield className="w-3.5 h-3.5" /> Chỉnh sửa
+              </button>
+            )}
             {currentStatus === 'pending' && (
               <button onClick={(e) => { setOpen(false); onApprove(e); }} className="text-left px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 text-emerald-600 flex items-center gap-2">
                 <CheckCircle2 className="w-3.5 h-3.5" /> Duyệt TK
@@ -396,6 +416,150 @@ const Level2Drawer = ({ profile, allProfiles, onClose, onUpdateStatus }: any) =>
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  );
+};
+
+const EditProfileModal = ({ profile, allProfiles, onClose, onSuccess }: any) => {
+  const [fullName, setFullName] = useState(profile.fullName || '');
+  const [status, setStatus] = useState(profile.status || 'active');
+  const [maxMembers, setMaxMembers] = useState(profile.maxMembers || 0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const usedMembers = allProfiles.filter((p: any) => p.parentId === profile.id).length;
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    if (maxMembers < usedMembers) {
+      setError(`Không thể đặt quota là ${maxMembers} vì tài khoản này hiện đang sử dụng ${usedMembers} tài khoản Level 2. Quota mới phải lớn hơn hoặc bằng số tài khoản Level 2 đang hoạt động.`);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { supabase } = await import('../../lib/supabase');
+      const { error: updateError } = await supabase
+        .from('user_profiles')
+        .update({
+          full_name: fullName,
+          status: status,
+          max_members: maxMembers
+        })
+        .eq('id', profile.id);
+
+      if (updateError) throw updateError;
+      
+      onSuccess();
+    } catch (err: any) {
+      console.error(err);
+      setError('Đã xảy ra lỗi khi lưu thông tin. Vui lòng thử lại.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+      <div className="bg-white dark:bg-[#111a2e] w-full max-w-md rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden animate-fadeIn">
+        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
+          <h3 className="font-bold text-lg">Chỉnh sửa tài khoản Level 1</h3>
+          <button onClick={onClose} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full">
+            <X className="w-5 h-5 text-slate-500" />
+          </button>
+        </div>
+        
+        <form onSubmit={handleSubmit} className="p-6 space-y-4 text-sm">
+          {error && (
+            <div className="p-3 bg-rose-50 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 rounded-lg border border-rose-200 dark:border-rose-800 text-xs">
+              {error}
+            </div>
+          )}
+          
+          <div>
+            <label className="block text-slate-700 dark:text-slate-300 mb-1 font-medium">Họ và tên</label>
+            <input 
+              type="text" 
+              required
+              value={fullName}
+              onChange={e => setFullName(e.target.value)}
+              className="w-full px-3 py-2 bg-slate-50 dark:bg-[#1a233a] border border-slate-200 dark:border-slate-700 rounded-md focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-slate-700 dark:text-slate-300 mb-1 font-medium">Email</label>
+            <input 
+              type="email" 
+              readOnly
+              disabled
+              value={profile.email}
+              className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 rounded-md cursor-not-allowed"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-slate-700 dark:text-slate-300 mb-1 font-medium">Loại tài khoản (Role)</label>
+            <input 
+              type="text" 
+              readOnly
+              disabled
+              value={profile.accountType === 'super_admin' ? 'Super Admin' : 'Level 1'}
+              className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 rounded-md cursor-not-allowed"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-slate-700 dark:text-slate-300 mb-1 font-medium">Trạng thái</label>
+            <select
+              value={status}
+              onChange={e => setStatus(e.target.value)}
+              className="w-full px-3 py-2 bg-slate-50 dark:bg-[#1a233a] border border-slate-200 dark:border-slate-700 rounded-md focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            >
+              <option value="active">Active (Hoạt động)</option>
+              <option value="pending">Pending (Chờ duyệt)</option>
+              <option value="blocked">Blocked (Bị khóa)</option>
+              <option value="archived">Archived (Đã lưu trữ)</option>
+            </select>
+          </div>
+          
+          <div>
+            <label className="block text-slate-700 dark:text-slate-300 mb-1 font-medium">Số tài khoản Level 2 được phép (Quota)</label>
+            <input 
+              type="number" 
+              min={0}
+              required
+              value={maxMembers}
+              onChange={e => setMaxMembers(parseInt(e.target.value) || 0)}
+              className="w-full px-3 py-2 bg-slate-50 dark:bg-[#1a233a] border border-slate-200 dark:border-slate-700 rounded-md focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            />
+            <p className="mt-1 text-xs text-slate-500 flex items-center gap-1">
+              <Activity className="w-3 h-3" /> Đã sử dụng: <strong className={usedMembers > maxMembers ? 'text-rose-500' : ''}>{usedMembers} / {maxMembers}</strong>
+            </p>
+          </div>
+          
+          <div className="pt-4 flex items-center justify-end gap-3 border-t border-slate-200 dark:border-slate-800">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={loading}
+              className="px-4 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors"
+            >
+              Hủy
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-md transition-colors disabled:opacity-70 flex items-center gap-2"
+            >
+              {loading ? <span className="w-4 h-4 border-2 border-white/30 border-t-transparent rounded-full animate-spin inline-block" /> : null}
+              Lưu thay đổi
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
