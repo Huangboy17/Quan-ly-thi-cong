@@ -35,7 +35,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onSuccess }) => {
           password,
           options: {
             data: { full_name: fullName },
-            emailRedirectTo: `${window.location.origin}/`,
+            emailRedirectTo: `${import.meta.env.VITE_APP_URL || window.location.origin}/`,
           },
         });
         if (signUpError) throw signUpError;
@@ -43,7 +43,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onSuccess }) => {
         setMode('login');
       } else if (mode === 'forgot_password') {
         const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/reset-password`,
+          redirectTo: `${import.meta.env.VITE_APP_URL || window.location.origin}/reset-password`,
         });
         if (resetError) throw resetError;
         setMessage('Nếu email tồn tại trong hệ thống, liên kết đặt lại mật khẩu đã được gửi.');
