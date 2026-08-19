@@ -314,7 +314,23 @@ const Level2Drawer = ({ profile, allProfiles, onClose, onUpdateStatus }: any) =>
             </div>
             <div>
               <div className="text-[11px] text-slate-500 uppercase font-medium mb-1">Hạn mức TV</div>
-              <div className="font-semibold text-sm">{profile.maxMembers || 0}</div>
+              <div className="flex items-center gap-2">
+                <input 
+                  type="number"
+                  defaultValue={profile.maxMembers || 0}
+                  onBlur={async (e) => {
+                    const val = parseInt(e.target.value);
+                    if (!isNaN(val)) {
+                      try {
+                        const { supabase } = await import('../../lib/supabase');
+                        await supabase.from('user_profiles').update({ max_members: val }).eq('id', profile.id);
+                        // Ideal to refresh data here
+                      } catch (err) {}
+                    }
+                  }}
+                  className="w-16 px-2 py-1 text-sm bg-slate-50 dark:bg-[#1a233a] border border-slate-200 dark:border-slate-700 rounded-md focus:outline-none"
+                />
+              </div>
             </div>
             <div>
               <div className="text-[11px] text-slate-500 uppercase font-medium mb-1">TV Hiện tại</div>

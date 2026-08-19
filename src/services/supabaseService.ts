@@ -167,15 +167,59 @@ export async function clearActivityLogs(): Promise<void> {
 }
 
 // ═══════════════════════════════════════════════
+// AUTHENTICATION
+// ═══════════════════════════════════════════════
+
+export async function signUpUser(email: string, password: string, fullName: string) {
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: {
+        full_name: fullName,
+      },
+    },
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function signInUser(email: string, password: string) {
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function signOutUser() {
+  const { error } = await supabase.auth.signOut();
+  if (error) throw error;
+}
+
+export async function getCurrentSession() {
+  const { data, error } = await supabase.auth.getSession();
+  if (error) throw error;
+  return data.session;
+}
+
+export async function getCurrentUser() {
+  const { data, error } = await supabase.auth.getUser();
+  if (error) throw error;
+  return data.user;
+}
+
+// ═══════════════════════════════════════════════
 // USER PROFILES
 // ═══════════════════════════════════════════════
 
-/** Lấy profile theo email */
-export async function fetchUserProfile(email: string): Promise<UserProfile | null> {
+/** Lấy profile theo ID */
+export async function fetchUserProfile(id: string): Promise<UserProfile | null> {
   const { data, error } = await supabase
     .from('user_profiles')
     .select('*')
-    .eq('email', email)
+    .eq('id', id)
     .maybeSingle();
 
   if (error) {
@@ -197,24 +241,19 @@ export async function fetchUserProfile(email: string): Promise<UserProfile | nul
   };
 }
 
-/** Lưu hoặc cập nhật profile cán bộ */
-export async function upsertUserProfile(profile: UserProfile): Promise<void> {
+/** Cập nhật thông tin profile của chính mình */
+export async function updateMyProfile(id: string, updates: Partial<UserProfile>): Promise<void> {
   const { error } = await supabase
     .from('user_profiles')
-    .upsert({
-      id: profile.id, // optional
-      full_name: profile.fullName,
-      role: profile.role,
-      email: profile.email,
-      account_type: profile.accountType,
-      parent_id: profile.parentId,
-      status: profile.status,
-      max_members: profile.maxMembers,
+    .update({
+      full_name: updates.fullName,
+      role: updates.role,
       updated_at: new Date().toISOString(),
-    }, { onConflict: 'email' });
+    })
+    .eq('id', id);
 
   if (error) {
-    console.error('❌ upsertUserProfile error:', error);
+    console.error('❌ updateMyProfile error:', error);
     throw error;
   }
 }

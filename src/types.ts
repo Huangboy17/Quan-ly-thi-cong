@@ -199,7 +199,8 @@ export type ActiveNavMenu =
   | 'PAYMENTS'
   | 'PROJECTS_OVERVIEW'
   | 'BCH_LOGS'
-  | 'ADMIN_SYSTEM';
+  | 'ADMIN_SYSTEM'
+  | 'MEMBER_MANAGER';
 
 export interface GlobalTimeFilter {
   year: string; // 'ALL' | '2024' | '2025' | '2026'

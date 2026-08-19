@@ -14,6 +14,7 @@ import {
   HardHat,
   Sparkles,
   MapPin,
+  Users,
 } from 'lucide-react';
 import { ActiveNavMenu, Project, UserProfile } from '../types';
 import { MAJOR_PROJECTS } from '../data/sampleData';
@@ -96,6 +97,16 @@ export const SidebarMenu: React.FC<SidebarMenuProps> = ({
       subLabel: 'Phân cấp & Tài khoản',
       icon: <Layers className="w-4 h-4" />,
       badgeColor: 'bg-indigo-100 text-indigo-900 dark:bg-indigo-900/60 dark:text-indigo-300',
+    });
+  }
+
+  if (userProfile?.accountType === 'level_1') {
+    menuItems.push({
+      id: 'MEMBER_MANAGER',
+      label: 'Quản lý thành viên',
+      subLabel: 'Phân quyền Cấp 2',
+      icon: <Users className="w-4 h-4" />,
+      badgeColor: 'bg-blue-100 text-blue-900 dark:bg-blue-900/60 dark:text-blue-300',
     });
   }
 

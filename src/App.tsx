@@ -32,7 +32,7 @@ import {
   insertManyActivityLogs as sbInsertManyLogs,
   clearActivityLogs as sbClearLogs,
   fetchUserProfile as sbFetchUserProfile,
-  upsertUserProfile as sbUpsertUserProfile,
+  updateMyProfile,
   subscribeToProjects,
   subscribeToActivityLogs,
 } from './services/supabaseService';
@@ -45,6 +45,9 @@ import { ContractsView } from './components/ContractsView';
 import { PaymentsView } from './components/PaymentsView';
 import { BchActivityView } from './components/BchActivityView';
 import { AdminDashboard } from './components/admin/AdminDashboard';
+import { MemberManager } from './components/level1/MemberManager';
+import { AuthForm } from './components/AuthForm';
+import { supabase } from './lib/supabase';
 import { ActiveOfficersSidebar } from './components/ActiveOfficersSidebar';
 import { ProjectModal } from './components/ProjectModal';
 import { PaymentModal } from './components/PaymentModal';
@@ -195,38 +198,53 @@ export default function App() {
     }
   }, [projects]);
 
-  useEffect(() => {
-    const initUser = async () => {
-      const savedUser = getSavedUserProfile();
-      if (savedUser) {
-        setUserProfile(savedUser); // Hiển thị ngay (offline-first)
-        
-        // Đồng bộ với Supabase để lấy accountType mới nhất
-        try {
-          const dbProfile = await sbFetchUserProfile(savedUser.email);
-          if (dbProfile) {
-            setUserProfile(dbProfile);
-            saveUserProfileToStorage(dbProfile);
-          } else {
-            await sbUpsertUserProfile(savedUser);
-          }
-        } catch (e) {
-          console.error('Lỗi đồng bộ UserProfile:', e);
-        }
-      } else {
-        setIsUserProfileModalOpen(true);
-      }
-    };
+  const [session, setSession] = useState<any>(null);
+  const [authLoading, setAuthLoading] = useState(true);
 
-    initUser();
-    
-    // Load data from Supabase
-    loadProjectsFromSupabase();
-    loadLogsFromSupabase();
+  useEffect(() => {
+    // Check active sessions and sets the user
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      if (session?.user) {
+        loadUserProfile(session.user.id);
+      } else {
+        setAuthLoading(false);
+      }
+    });
+
+    // Listen for changes on auth state
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (session?.user) {
+        loadUserProfile(session.user.id);
+      } else {
+        setUserProfile(null);
+        setAuthLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
+
+  const loadUserProfile = async (userId: string) => {
+    try {
+      const profile = await sbFetchUserProfile(userId);
+      if (profile) {
+        setUserProfile(profile);
+      }
+    } catch (e) {
+      console.error('Lỗi tải Profile:', e);
+    } finally {
+      setAuthLoading(false);
+      // Load data sau khi có profile (và session)
+      loadProjectsFromSupabase();
+      loadLogsFromSupabase();
+    }
+  };
 
   // ═══ SUPABASE: Realtime subscription ═══
   useEffect(() => {
+    if (!session) return;
     const unsubProjects = subscribeToProjects(() => {
       console.log('🔄 Realtime: projects changed, reloading...');
       loadProjectsFromSupabase();
@@ -235,12 +253,66 @@ export default function App() {
       console.log('🔄 Realtime: logs changed, reloading...');
       loadLogsFromSupabase();
     });
-
     return () => {
       unsubProjects();
       unsubLogs();
     };
-  }, [loadProjectsFromSupabase, loadLogsFromSupabase]);
+  }, [session, loadProjectsFromSupabase, loadLogsFromSupabase]);
+
+  useEffect(() => {
+    if (userProfile?.accountType === 'super_admin' && activeMenu !== 'ADMIN_SYSTEM') {
+      setActiveMenu('ADMIN_SYSTEM');
+    }
+  }, [userProfile?.accountType]);
+
+  // Nếu đang tải Auth, hiển thị loading
+  if (authLoading) {
+    return <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 text-slate-500">Đang tải dữ liệu hệ thống...</div>;
+  }
+
+  // Nếu chưa đăng nhập, hiển thị AuthForm
+  if (!session) {
+    return <AuthForm onSuccess={() => {}} />;
+  }
+
+  // Cảnh báo trạng thái tài khoản
+  if (userProfile?.status === 'pending') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 p-4">
+        <div className="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-xl max-w-md w-full text-center border border-amber-200 dark:border-amber-900/50">
+          <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-500 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Building2 className="w-8 h-8" />
+          </div>
+          <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">Đang chờ phê duyệt</h2>
+          <p className="text-slate-600 dark:text-slate-400 mb-6">
+            Tài khoản của bạn đã được ghi nhận và đang chờ Super Admin phê duyệt. Vui lòng quay lại sau!
+          </p>
+          <button onClick={() => supabase.auth.signOut()} className="text-blue-600 font-medium hover:underline">
+            Đăng xuất
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (userProfile?.status === 'locked' || userProfile?.status === 'rejected') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 p-4">
+        <div className="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-xl max-w-md w-full text-center border border-rose-200 dark:border-rose-900/50">
+          <div className="w-16 h-16 bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-500 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Building2 className="w-8 h-8" />
+          </div>
+          <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">Tài khoản đã bị khóa/từ chối</h2>
+          <p className="text-slate-600 dark:text-slate-400 mb-6">
+            Tài khoản của bạn không được phép truy cập hệ thống lúc này. Vui lòng liên hệ quản trị viên.
+          </p>
+          <button onClick={() => supabase.auth.signOut()} className="text-blue-600 font-medium hover:underline">
+            Đăng xuất
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // Log activity helper — ghi vào Supabase
   const logBchAction = (
@@ -919,6 +991,10 @@ export default function App() {
           {activeMenu === 'ADMIN_SYSTEM' && (
             <AdminDashboard />
           )}
+
+          {activeMenu === 'MEMBER_MANAGER' && userProfile && (
+            <MemberManager currentUser={userProfile} />
+          )}
         </main>
 
         {/* Right Vertical Bar: Real-time Active Officers & Typing Presence */}
@@ -961,10 +1037,11 @@ export default function App() {
         initialProfile={userProfile}
         onSaveProfile={(profile) => {
           setUserProfile(profile);
-          saveUserProfileToStorage(profile);
-          sbUpsertUserProfile(profile).catch((e) => console.error('❌ Lỗi lưu profile:', e));
+          // Sync basic profile info (fullName, role)
+          updateMyProfile(profile.id!, { fullName: profile.fullName, role: profile.role })
+            .catch((e) => console.error('❌ Lỗi cập nhật profile:', e));
           setIsUserProfileModalOpen(false);
-          showToast(`Xin chào ${profile.fullName} (${profile.role})! Đã lưu thông tin cán bộ.`);
+          showToast(`Đã cập nhật thông tin thành công.`);
         }}
       />
 
