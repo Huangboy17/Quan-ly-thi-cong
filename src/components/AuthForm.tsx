@@ -30,8 +30,16 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onSuccess }) => {
         if (!fullName.trim()) {
           throw new Error('Vui lòng nhập Họ và Tên');
         }
-        await signUpUser(email, password, fullName);
-        setMessage('Đăng ký thành công! Vui lòng chờ Super Admin phê duyệt tài khoản.');
+        const { error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: { full_name: fullName },
+            emailRedirectTo: `${window.location.origin}/`,
+          },
+        });
+        if (signUpError) throw signUpError;
+        setMessage('Đăng ký thành công! Vui lòng kiểm tra email để xác nhận. Sau đó chờ Super Admin phê duyệt.');
         setMode('login');
       } else if (mode === 'forgot_password') {
         const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {

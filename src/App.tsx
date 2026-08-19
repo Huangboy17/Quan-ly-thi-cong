@@ -460,6 +460,22 @@ export default function App() {
     );
   }
 
+  // Nếu đã đăng nhập nhưng chưa có thông tin profile (có thể trigger chưa chạy xong hoặc lỗi)
+  if (!userProfile) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-900 p-4">
+        <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4" />
+        <p className="text-slate-600 dark:text-slate-400">Đang đồng bộ hồ sơ...</p>
+        <button 
+          onClick={() => loadUserProfile(session.user.id)} 
+          className="mt-4 text-sm text-indigo-600 hover:underline"
+        >
+          Thử lại
+        </button>
+      </div>
+    );
+  }
+
   // Log activity helper — ghi vào Supabase
   const logBchAction = (
     logInput: Omit<BchActivityLog, 'id' | 'timestamp'> & { timestamp?: string }
@@ -905,6 +921,7 @@ export default function App() {
         isDarkMode={isDarkMode}
         onToggleDarkMode={handleToggleDarkMode}
         onLogout={handleLogout}
+        onNavigateToAdmin={() => setActiveMenu('ADMIN_SYSTEM')}
       />
 
       {/* 2. Top Filter Toolbar (Thời gian, Dự án, Nhóm CP, Nhà thầu, Chủ Đầu Tư, Địa Phương, Doanh Thu) */}

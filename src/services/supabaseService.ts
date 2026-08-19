@@ -3,7 +3,7 @@
  * Mapping camelCase (TypeScript) ↔ snake_case (PostgreSQL)
  */
 import { supabase } from '../lib/supabase';
-import type { Project, BchActivityLog, UserProfile } from '../types';
+import type { Project, BchActivityLog, UserProfile, AppNotification } from '../types';
 
 // ═══════════════════════════════════════════════
 // PROJECTS — CRUD Operations
@@ -462,5 +462,53 @@ function mapLogToDbRow(log: BchActivityLog): Record<string, any> {
     project_name: log.projectName ?? '',
     details: log.details ?? '',
     diff_summary: log.diffSummary ?? '',
+  };
+}
+
+// ═══════════════════════════════════════════════
+// NOTIFICATIONS
+// ═══════════════════════════════════════════════
+
+export async function fetchMyNotifications(): Promise<AppNotification[]> {
+  const { data, error } = await supabase
+    .from('notifications')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('❌ fetchMyNotifications error:', error);
+    return [];
+  }
+  return data || [];
+}
+
+export async function markNotificationAsRead(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('notifications')
+    .update({ is_read: true })
+    .eq('id', id);
+
+  if (error) {
+    console.error('❌ markNotificationAsRead error:', error);
+  }
+}
+
+export function subscribeToNotifications(
+  userId: string,
+  onChangeCallback: () => void
+) {
+  const channel = supabase
+    .channel('notifications-realtime')
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'notifications', filter: `recipient_id=eq.${userId}` },
+      () => {
+        onChangeCallback();
+      }
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
   };
 }

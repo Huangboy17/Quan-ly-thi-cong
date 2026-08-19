@@ -136,6 +136,17 @@ export interface UserProfile {
   subCount?: number;
   updatedAt?: string;
 }
+  
+export interface AppNotification {
+  id: string;
+  recipient_id: string;
+  type: string;
+  title: string;
+  message: string;
+  data: any;
+  is_read: boolean;
+  created_at: string;
+}
 
 export type BchActionType =
   | 'CREATE_PROJECT'

@@ -17,6 +17,7 @@ import {
   LogOut,
 } from 'lucide-react';
 import { UserProfile } from '../types';
+import { NotificationBell } from './NotificationBell';
 
 interface HeaderProps {
   searchQuery: string;
@@ -39,6 +40,7 @@ interface HeaderProps {
   isDarkMode?: boolean;
   onToggleDarkMode?: () => void;
   onLogout?: () => void;
+  onNavigateToAdmin?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -62,6 +64,7 @@ export const Header: React.FC<HeaderProps> = ({
   isDarkMode = false,
   onToggleDarkMode,
   onLogout,
+  onNavigateToAdmin,
 }) => {
   return (
     <header className="bg-white text-slate-800 sticky top-0 z-40 border-b border-slate-200 shadow-sm backdrop-blur-md transition-colors duration-200">
@@ -175,6 +178,11 @@ export const Header: React.FC<HeaderProps> = ({
               <History className="w-3.5 h-3.5 text-amber-700" />
               <span className="hidden sm:inline">Lịch Sử BCH</span>
             </button>
+          )}
+
+          {/* Notification Bell (Only for Super Admin) */}
+          {userProfile?.accountType === 'super_admin' && (
+            <NotificationBell userId={userProfile.id} onNavigateToAdmin={onNavigateToAdmin} />
           )}
 
           {/* User Profile Badge */}
