@@ -15,10 +15,11 @@ import {
   Sparkles,
   MapPin,
 } from 'lucide-react';
-import { ActiveNavMenu, Project } from '../types';
+import { ActiveNavMenu, Project, UserProfile } from '../types';
 import { MAJOR_PROJECTS } from '../data/sampleData';
 
 interface SidebarMenuProps {
+  userProfile?: UserProfile | null;
   activeMenu: ActiveNavMenu;
   onSelectMenu: (menu: ActiveNavMenu) => void;
   projects?: Project[];
@@ -33,6 +34,7 @@ interface SidebarMenuProps {
 }
 
 export const SidebarMenu: React.FC<SidebarMenuProps> = ({
+  userProfile,
   activeMenu,
   onSelectMenu,
   projects = [],
@@ -86,6 +88,16 @@ export const SidebarMenu: React.FC<SidebarMenuProps> = ({
       badgeColor: 'bg-amber-100 text-amber-900 dark:bg-amber-900/60 dark:text-amber-300 ring-1 ring-amber-400',
     },
   ];
+
+  if (userProfile?.accountType === 'super_admin') {
+    menuItems.push({
+      id: 'ADMIN_SYSTEM',
+      label: 'Quản trị hệ thống',
+      subLabel: 'Phân cấp & Tài khoản',
+      icon: <Layers className="w-4 h-4" />,
+      badgeColor: 'bg-indigo-100 text-indigo-900 dark:bg-indigo-900/60 dark:text-indigo-300',
+    });
+  }
 
   const currentSelection = selectedContractId !== 'ALL' ? selectedContractId : selectedProject;
 

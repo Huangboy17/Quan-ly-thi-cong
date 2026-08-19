@@ -31,6 +31,7 @@ import {
   insertActivityLog as sbInsertLog,
   insertManyActivityLogs as sbInsertManyLogs,
   clearActivityLogs as sbClearLogs,
+  fetchUserProfile as sbFetchUserProfile,
   upsertUserProfile as sbUpsertUserProfile,
   subscribeToProjects,
   subscribeToActivityLogs,
@@ -43,6 +44,7 @@ import { DashboardView } from './components/DashboardView';
 import { ContractsView } from './components/ContractsView';
 import { PaymentsView } from './components/PaymentsView';
 import { BchActivityView } from './components/BchActivityView';
+import { AdminDashboard } from './components/admin/AdminDashboard';
 import { ActiveOfficersSidebar } from './components/ActiveOfficersSidebar';
 import { ProjectModal } from './components/ProjectModal';
 import { PaymentModal } from './components/PaymentModal';
@@ -194,12 +196,30 @@ export default function App() {
   }, [projects]);
 
   useEffect(() => {
-    // Load user profile from localStorage (offline-first)
-    const savedUser = getSavedUserProfile();
-    if (savedUser) {
-      setUserProfile(savedUser);
-    }
+    const initUser = async () => {
+      const savedUser = getSavedUserProfile();
+      if (savedUser) {
+        setUserProfile(savedUser); // Hiển thị ngay (offline-first)
+        
+        // Đồng bộ với Supabase để lấy accountType mới nhất
+        try {
+          const dbProfile = await sbFetchUserProfile(savedUser.email);
+          if (dbProfile) {
+            setUserProfile(dbProfile);
+            saveUserProfileToStorage(dbProfile);
+          } else {
+            await sbUpsertUserProfile(savedUser);
+          }
+        } catch (e) {
+          console.error('Lỗi đồng bộ UserProfile:', e);
+        }
+      } else {
+        setIsUserProfileModalOpen(true);
+      }
+    };
 
+    initUser();
+    
     // Load data from Supabase
     loadProjectsFromSupabase();
     loadLogsFromSupabase();
@@ -800,6 +820,7 @@ export default function App() {
       <div className="flex-1 flex flex-col lg:flex-row w-full max-w-[1920px] mx-auto overflow-hidden">
         {/* Left Sidebar Menu */}
         <SidebarMenu
+          userProfile={userProfile}
           activeMenu={activeMenu}
           onSelectMenu={setActiveMenu}
           projects={projects}
@@ -886,13 +907,17 @@ export default function App() {
               onClearLogs={() => {
                 sbClearLogs().catch((e) => console.error('❌ Lỗi xóa logs:', e));
                 setBchLogs([]);
-                showToast('Đã xóa toàn bộ lịch sử hoạt động Ban Chỉ Huy!');
+                showToast('Đã xóa toàn bộ nhật ký BCH.', 'info');
               }}
               onSelectProject={(projName) => {
                 setGlobalFilter({ ...globalFilter, duAn: projName });
                 setActiveMenu('CONTRACTS');
               }}
             />
+          )}
+
+          {activeMenu === 'ADMIN_SYSTEM' && (
+            <AdminDashboard />
           )}
         </main>
 

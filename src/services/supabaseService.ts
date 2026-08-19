@@ -185,9 +185,14 @@ export async function fetchUserProfile(email: string): Promise<UserProfile | nul
   if (!data) return null;
 
   return {
+    id: data.id,
     fullName: data.full_name,
     role: data.role,
     email: data.email,
+    accountType: data.account_type,
+    parentId: data.parent_id,
+    status: data.status,
+    maxMembers: data.max_members,
     updatedAt: data.updated_at,
   };
 }
@@ -197,14 +202,57 @@ export async function upsertUserProfile(profile: UserProfile): Promise<void> {
   const { error } = await supabase
     .from('user_profiles')
     .upsert({
+      id: profile.id, // optional
       full_name: profile.fullName,
       role: profile.role,
       email: profile.email,
+      account_type: profile.accountType,
+      parent_id: profile.parentId,
+      status: profile.status,
+      max_members: profile.maxMembers,
       updated_at: new Date().toISOString(),
     }, { onConflict: 'email' });
 
   if (error) {
     console.error('❌ upsertUserProfile error:', error);
+    throw error;
+  }
+}
+
+/** Lấy danh sách toàn bộ profile (Dành cho admin) */
+export async function fetchAllProfiles(): Promise<UserProfile[]> {
+  const { data, error } = await supabase
+    .from('user_profiles')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('❌ fetchAllProfiles error:', error);
+    return [];
+  }
+  
+  return (data || []).map(row => ({
+    id: row.id,
+    fullName: row.full_name,
+    role: row.role,
+    email: row.email,
+    accountType: row.account_type,
+    parentId: row.parent_id,
+    status: row.status,
+    maxMembers: row.max_members,
+    updatedAt: row.updated_at,
+  }));
+}
+
+/** Cập nhật trạng thái profile */
+export async function updateProfileStatus(id: string, status: 'active' | 'pending' | 'blocked' | 'archived'): Promise<void> {
+  const { error } = await supabase
+    .from('user_profiles')
+    .update({ status })
+    .eq('id', id);
+
+  if (error) {
+    console.error('❌ updateProfileStatus error:', error);
     throw error;
   }
 }

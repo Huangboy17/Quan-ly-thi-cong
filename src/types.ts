@@ -125,9 +125,15 @@ export interface OverdueMilestoneItem {
 }
 
 export interface UserProfile {
+  id?: string;
   fullName: string;
   role: string;
   email: string;
+  accountType?: 'super_admin' | 'level_1' | 'level_2';
+  parentId?: string | null;
+  status?: 'active' | 'pending' | 'blocked' | 'archived';
+  maxMembers?: number;
+  subCount?: number;
   updatedAt?: string;
 }
 
@@ -192,7 +198,8 @@ export type ActiveNavMenu =
   | 'CONTRACTS'
   | 'PAYMENTS'
   | 'PROJECTS_OVERVIEW'
-  | 'BCH_LOGS';
+  | 'BCH_LOGS'
+  | 'ADMIN_SYSTEM';
 
 export interface GlobalTimeFilter {
   year: string; // 'ALL' | '2024' | '2025' | '2026'
