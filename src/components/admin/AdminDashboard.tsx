@@ -56,7 +56,7 @@ export const AdminDashboard: React.FC = () => {
   // KPIs
   const total = profiles.length;
   const active = profiles.filter(p => p.status === 'active').length;
-  const pending = profiles.filter(p => p.status === 'pending').length;
+  const pending = profiles.filter(p => p.status === 'pending' && p.accountType === 'level_1').length;
   const blocked = profiles.filter(p => p.status === 'blocked').length;
 
   return (

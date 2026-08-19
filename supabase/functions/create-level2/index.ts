@@ -84,26 +84,18 @@ serve(async (req) => {
       email: email,
       password: password,
       email_confirm: true,
+      app_metadata: {
+        is_level_2: true
+      },
       user_metadata: {
         full_name: full_name,
-        role: 'level_2',
-        status: 'active',
+        role: role_title || 'Thành viên Level 2',
         parent_id: callerId
       }
     });
 
     if (createError) {
       throw createError;
-    }
-
-    // Nếu tạo thành công, cập nhật thêm chức vụ (role_title) nếu có
-    if (role_title) {
-      // Đợi 1 giây để trigger chạy xong
-      await new Promise(r => setTimeout(r, 1000));
-      await supabaseAdmin
-        .from('user_profiles')
-        .update({ role: role_title })
-        .eq('id', newUser.user.id);
     }
 
     return new Response(

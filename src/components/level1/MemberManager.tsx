@@ -235,7 +235,6 @@ const CreateMemberModal = ({ onClose, onSuccess }: { onClose: () => void, onSucc
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
-  const [roleTitle, setRoleTitle] = useState('Nhân viên');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -257,8 +256,7 @@ const CreateMemberModal = ({ onClose, onSuccess }: { onClose: () => void, onSucc
         body: JSON.stringify({
           email,
           password,
-          full_name: fullName,
-          role_title: roleTitle
+          full_name: fullName
         })
       });
 
@@ -300,8 +298,11 @@ const CreateMemberModal = ({ onClose, onSuccess }: { onClose: () => void, onSucc
             <input type="text" required value={fullName} onChange={e => setFullName(e.target.value)} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg dark:bg-slate-900 dark:border-slate-700 dark:text-white" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Chức vụ / Vai trò</label>
-            <input type="text" required value={roleTitle} onChange={e => setRoleTitle(e.target.value)} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg dark:bg-slate-900 dark:border-slate-700 dark:text-white" />
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Vai trò</label>
+            <div className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-500 dark:text-slate-400 font-medium select-none cursor-not-allowed">
+              Thành viên Level 2
+            </div>
+            <p className="text-xs text-slate-500 mt-1">(Không thể thay đổi)</p>
           </div>
 
           <div className="flex gap-3 mt-6">
