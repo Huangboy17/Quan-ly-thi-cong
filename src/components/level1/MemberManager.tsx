@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { supabase } from '../../lib/supabase';
 import { UserProfile } from '../../types';
 import { deleteAccount } from '../../services/supabaseService';
@@ -242,18 +243,20 @@ export const MemberManager: React.FC<MemberManagerProps> = ({ currentUser }) => 
         </div>
       </div>
 
-      {isCreateModalOpen && (
+
+      {isCreateModalOpen && createPortal(
         <CreateMemberModal
           onClose={() => setIsCreateModalOpen(false)}
           onSuccess={() => {
             setIsCreateModalOpen(false);
             fetchMembers();
           }}
-        />
+        />,
+        document.body
       )}
 
       {/* Delete Confirmation Modal */}
-      {deleteConfirm.isOpen && deleteConfirm.member && (
+      {deleteConfirm.isOpen && deleteConfirm.member && createPortal(
         <div className="fixed inset-0 bg-slate-900/75 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl max-w-sm w-full overflow-hidden">
             <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
@@ -291,7 +294,8 @@ export const MemberManager: React.FC<MemberManagerProps> = ({ currentUser }) => 
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

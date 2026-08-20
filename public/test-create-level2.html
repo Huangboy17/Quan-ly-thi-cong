@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head><title>Test Create Level 2</title></head>
+<body>
+<h2>Test Edge Function create-level2</h2>
+<div id="result" style="white-space:pre-wrap; font-family:monospace; padding:20px; background:#f0f0f0; margin:20px;"></div>
+<script type="module">
+  import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.44.0';
+
+  const log = (msg) => {
+    document.getElementById('result').textContent += msg + '\n';
+    console.log(msg);
+  };
+
+  // Read from the same env vars as the app
+  const supabaseUrl = 'https://puhzbvnxnskisaujdfga.supabase.co';
+
+  // We need the user to be logged in. Let's test the Edge Function directly.
+  // First, get the current session from localStorage
+  const storageKey = `sb-puhzbvnxnskisaujdfga-auth-token`;
+  const stored = localStorage.getItem(storageKey);
+  
+  if (!stored) {
+    log('❌ No session found in localStorage. Please log in first at http://localhost:3000');
+  } else {
+    const session = JSON.parse(stored);
+    const accessToken = session?.access_token || session?.currentSession?.access_token;
+    
+    if (!accessToken) {
+      log('❌ No access_token found in session data');
+      log('Session keys: ' + Object.keys(session).join(', '));
+    } else {
+      log('✅ Found access_token: ' + accessToken.substring(0, 30) + '...');
+      
+      // Test the Edge Function
+      log('\n--- Calling create-level2 Edge Function ---');
+      try {
+        const res = await fetch(`${supabaseUrl}/functions/v1/create-level2`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`
+          },
+          body: JSON.stringify({
+            email: 'test-level2-debug@example.com',
+            password: 'Test123456',
+            full_name: 'Test Level 2 Debug'
+          })
+        });
+
+        log(`Status: ${res.status} ${res.statusText}`);
+        const data = await res.json();
+        log('Response body: ' + JSON.stringify(data, null, 2));
+        
+        if (res.ok) {
+          log('\n✅ SUCCESS! Level 2 account created.');
+        } else {
+          log('\n❌ FAILED: ' + (data.error || 'Unknown error'));
+        }
+      } catch (err) {
+        log('❌ Fetch error: ' + err.message);
+      }
+    }
+  }
+</script>
+</body>
+</html>
