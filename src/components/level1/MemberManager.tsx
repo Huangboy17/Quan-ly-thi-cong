@@ -339,12 +339,15 @@ const CreateMemberModal = ({ onClose, onSuccess }: { onClose: () => void, onSucc
 
   return (
     <div className="fixed inset-0 bg-slate-900/75 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl max-w-md w-full overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl max-w-md w-full max-h-[90vh] flex flex-col overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center shrink-0">
           <h3 className="font-semibold text-lg text-slate-800 dark:text-white">Tạo tài khoản Cấp 2</h3>
+          <button type="button" onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+          </button>
         </div>
         
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto flex-1 min-h-0">
           {error && (
             <div className="p-3 bg-rose-50 text-rose-600 text-sm rounded-lg border border-rose-200">
               {error}
@@ -371,9 +374,12 @@ const CreateMemberModal = ({ onClose, onSuccess }: { onClose: () => void, onSucc
             <p className="text-xs text-slate-500 mt-1">(Không thể thay đổi)</p>
           </div>
 
-          <div className="flex gap-3 mt-6">
-            <button type="button" onClick={onClose} className="flex-1 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-white rounded-lg">Hủy</button>
-            <button type="submit" disabled={loading} className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg">{loading ? 'Đang tạo...' : 'Tạo tài khoản'}</button>
+          <div className="flex gap-3 mt-6 pt-2 shrink-0">
+            <button type="button" onClick={onClose} className="flex-1 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-white rounded-lg transition-colors">Hủy</button>
+            <button type="submit" disabled={loading} className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex justify-center items-center gap-2">
+              {loading && <span className="w-4 h-4 border-2 border-white/30 border-t-transparent rounded-full animate-spin inline-block" />}
+              {loading ? 'Đang tạo...' : 'Tạo tài khoản'}
+            </button>
           </div>
         </form>
       </div>
