@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { UserProfile } from '../../types';
-import { fetchAllProfiles, updateProfileStatus } from '../../services/supabaseService';
+import { fetchAllProfiles, updateProfileStatus, deleteAccount } from '../../services/supabaseService';
 import { 
   Users, Activity, UserPlus, Ban, MoreVertical, 
   Search, Shield, Building2, UserCircle, X,
@@ -13,6 +13,9 @@ export const AdminDashboard: React.FC = () => {
   const [search, setSearch] = useState('');
   const [selectedProfile, setSelectedProfile] = useState<UserProfile | null>(null);
   const [editingProfile, setEditingProfile] = useState<UserProfile | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; profile: UserProfile | null; loading: boolean }>({
+    isOpen: false, profile: null, loading: false
+  });
 
   useEffect(() => {
     loadProfiles();
@@ -33,6 +36,21 @@ export const AdminDashboard: React.FC = () => {
       await loadProfiles();
     } catch (error) {
       console.error('Lỗi cập nhật trạng thái:', error);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!deleteConfirm.profile?.id) return;
+    setDeleteConfirm(prev => ({ ...prev, loading: true }));
+    try {
+      await deleteAccount(deleteConfirm.profile.id);
+      setDeleteConfirm({ isOpen: false, profile: null, loading: false });
+      setSelectedProfile(null);
+      await loadProfiles();
+    } catch (error: any) {
+      console.error('Lỗi xóa tài khoản:', error);
+      alert(`Lỗi xóa tài khoản: ${error.message || 'Unknown error'}`);
+      setDeleteConfirm(prev => ({ ...prev, loading: false }));
     }
   };
 
@@ -172,7 +190,7 @@ export const AdminDashboard: React.FC = () => {
                           <DropdownActions 
                             onApprove={(e) => handleUpdateStatus(e, p.id!, 'active')}
                             onBlock={(e) => handleUpdateStatus(e, p.id!, 'blocked')}
-                            onArchive={(e) => handleUpdateStatus(e, p.id!, 'archived')}
+                            onDelete={(e: React.MouseEvent) => { e.stopPropagation(); setDeleteConfirm({ isOpen: true, profile: p, loading: false }); }}
                             onUnlock={(e) => handleUpdateStatus(e, p.id!, 'active')}
                             onEdit={(e) => { e.stopPropagation(); setEditingProfile(p); }}
                             currentStatus={p.status}
@@ -195,6 +213,7 @@ export const AdminDashboard: React.FC = () => {
           allProfiles={profiles}
           onClose={() => setSelectedProfile(null)}
           onUpdateStatus={handleUpdateStatus}
+          onDeleteAccount={(profile: UserProfile) => setDeleteConfirm({ isOpen: true, profile, loading: false })}
         />
       )}
 
@@ -209,6 +228,50 @@ export const AdminDashboard: React.FC = () => {
             await loadProfiles();
           }}
         />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm.isOpen && deleteConfirm.profile && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-[#111a2e] w-full max-w-sm rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800">
+              <h3 className="font-bold text-lg text-rose-600 flex items-center gap-2">
+                <Trash2 className="w-5 h-5" /> Xóa tài khoản
+              </h3>
+            </div>
+            <div className="p-6 space-y-3 text-sm">
+              <p className="text-slate-700 dark:text-slate-300">
+                Bạn có chắc muốn xóa tài khoản này?
+              </p>
+              <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-3 space-y-1">
+                <div className="font-medium">{deleteConfirm.profile.fullName}</div>
+                <div className="text-xs text-slate-500">{deleteConfirm.profile.email}</div>
+              </div>
+              <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3 text-xs text-amber-700 dark:text-amber-400">
+                <strong>Lưu ý:</strong> Tài khoản và thông tin đăng nhập sẽ bị xóa vĩnh viễn.
+                {deleteConfirm.profile.accountType === 'level_1' && ' Các tài khoản Level 2 thuộc tài khoản này cũng sẽ bị xóa.'}
+                {' '}Người dùng sẽ có thể đăng ký lại bằng email này.
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-3">
+              <button
+                onClick={() => setDeleteConfirm({ isOpen: false, profile: null, loading: false })}
+                disabled={deleteConfirm.loading}
+                className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deleteConfirm.loading}
+                className="px-4 py-2 text-sm bg-rose-600 hover:bg-rose-700 text-white rounded-md disabled:opacity-70 flex items-center gap-2"
+              >
+                {deleteConfirm.loading && <span className="w-4 h-4 border-2 border-white/30 border-t-transparent rounded-full animate-spin inline-block" />}
+                Xóa tài khoản
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -241,7 +304,7 @@ const StatusBadge = ({ status }: { status?: string }) => {
   }
 };
 
-const DropdownActions = ({ onApprove, onBlock, onArchive, onUnlock, onEdit, currentStatus }: any) => {
+const DropdownActions = ({ onApprove, onBlock, onDelete, onUnlock, onEdit, currentStatus }: any) => {
   const [open, setOpen] = useState(false);
   return (
     <div className="relative">
@@ -275,9 +338,11 @@ const DropdownActions = ({ onApprove, onBlock, onArchive, onUnlock, onEdit, curr
                 <Ban className="w-3.5 h-3.5" /> Khóa TK
               </button>
             )}
-            <button onClick={(e) => { setOpen(false); onArchive(e); }} className="text-left px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 flex items-center gap-2">
-              <Trash2 className="w-3.5 h-3.5" /> Xóa TK
-            </button>
+            {onDelete && (
+              <button onClick={(e) => { setOpen(false); onDelete(e); }} className="text-left px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 flex items-center gap-2">
+                <Trash2 className="w-3.5 h-3.5" /> Xóa TK
+              </button>
+            )}
           </div>
         </>
       )}
@@ -286,7 +351,7 @@ const DropdownActions = ({ onApprove, onBlock, onArchive, onUnlock, onEdit, curr
 };
 
 // --- Detail Drawer for Level 1 ---
-const Level2Drawer = ({ profile, allProfiles, onClose, onUpdateStatus }: any) => {
+const Level2Drawer = ({ profile, allProfiles, onClose, onUpdateStatus, onDeleteAccount }: any) => {
   const members = allProfiles.filter((p: UserProfile) => p.parentId === profile.id);
   const activeMembers = members.filter((p: UserProfile) => p.status === 'active').length;
 
@@ -344,7 +409,6 @@ const Level2Drawer = ({ profile, allProfiles, onClose, onUpdateStatus }: any) =>
                       try {
                         const { supabase } = await import('../../lib/supabase');
                         await supabase.from('user_profiles').update({ max_members: val }).eq('id', profile.id);
-                        // Ideal to refresh data here
                       } catch (err) {}
                     }
                   }}
@@ -402,7 +466,7 @@ const Level2Drawer = ({ profile, allProfiles, onClose, onUpdateStatus }: any) =>
                             <DropdownActions 
                               onApprove={(e: any) => onUpdateStatus(e, m.id!, 'active')}
                               onBlock={(e: any) => onUpdateStatus(e, m.id!, 'blocked')}
-                              onArchive={(e: any) => onUpdateStatus(e, m.id!, 'archived')}
+                              onDelete={onDeleteAccount ? (e: any) => { e.stopPropagation(); onDeleteAccount(m); } : undefined}
                               onUnlock={(e: any) => onUpdateStatus(e, m.id!, 'active')}
                               currentStatus={m.status}
                             />

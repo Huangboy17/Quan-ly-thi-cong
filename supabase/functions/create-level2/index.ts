@@ -24,7 +24,6 @@ serve(async (req) => {
     if (!authHeader) {
       throw new Error('Missing Authorization header');
     }
-    const token = authHeader.replace('Bearer ', '');
 
     // Khởi tạo Supabase client bằng token của người dùng để xác định danh tính
     const supabaseUser = createClient(
@@ -80,22 +79,70 @@ serve(async (req) => {
     }
 
     // Tiến hành tạo tài khoản Cấp 2 bằng Admin API
+    // CRITICAL: Truyền account_type = 'level_2' và status = 'active' vào user_metadata
+    // để trigger handle_new_user() tạo profile đúng loại.
+    // parent_id LUÔN lấy từ callerId (server-side), KHÔNG từ frontend.
     const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email: email,
       password: password,
       email_confirm: true,
-      app_metadata: {
-        is_level_2: true
-      },
       user_metadata: {
         full_name: full_name,
         role: role_title || 'Thành viên Level 2',
+        account_type: 'level_2',
+        status: 'active',
         parent_id: callerId
       }
     });
 
     if (createError) {
       throw createError;
+    }
+
+    const newUserId = newUser.user.id;
+
+    // Đảm bảo profile được tạo đúng bằng UPSERT trực tiếp.
+    // Không phụ thuộc hoàn toàn vào trigger — trigger có thể chạy trước hoặc sau,
+    // nhưng UPSERT này đảm bảo account_type, parent_id, status luôn chính xác.
+    const { error: upsertError } = await supabaseAdmin
+      .from('user_profiles')
+      .upsert({
+        id: newUserId,
+        full_name: full_name,
+        email: email,
+        role: role_title || 'Thành viên Level 2',
+        account_type: 'level_2',
+        parent_id: callerId,
+        status: 'active',
+        max_members: 0,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'id' });
+
+    if (upsertError) {
+      // Nếu upsert profile thất bại, rollback: xóa auth user đã tạo
+      await supabaseAdmin.auth.admin.deleteUser(newUserId);
+      throw new Error(`Failed to create profile: ${upsertError.message}`);
+    }
+
+    // Verify profile đã đúng
+    const { data: verifyProfile, error: verifyError } = await supabaseAdmin
+      .from('user_profiles')
+      .select('account_type, parent_id, status')
+      .eq('id', newUserId)
+      .single();
+
+    if (verifyError || !verifyProfile) {
+      await supabaseAdmin.auth.admin.deleteUser(newUserId);
+      throw new Error('Profile verification failed after creation');
+    }
+
+    if (verifyProfile.account_type !== 'level_2' ||
+        verifyProfile.parent_id !== callerId ||
+        verifyProfile.status !== 'active') {
+      // Profile không đúng — rollback
+      await supabaseAdmin.from('user_profiles').delete().eq('id', newUserId);
+      await supabaseAdmin.auth.admin.deleteUser(newUserId);
+      throw new Error('Profile created with incorrect data, rolled back');
     }
 
     return new Response(

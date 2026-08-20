@@ -296,6 +296,30 @@ export async function updateProfileStatus(id: string, status: 'active' | 'pendin
   }
 }
 
+/** Xóa tài khoản triệt để (auth.users + user_profiles) qua Edge Function */
+export async function deleteAccount(targetUserId: string): Promise<void> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error('Not logged in');
+
+  const response = await fetch(
+    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-account`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ target_user_id: targetUserId }),
+    }
+  );
+
+  const data = await response.json();
+  if (!response.ok) {
+    console.error('❌ deleteAccount error:', data);
+    throw new Error(data.error || 'Failed to delete account');
+  }
+}
+
 // ═══════════════════════════════════════════════
 // REALTIME — Subscribe to changes
 // ═══════════════════════════════════════════════
