@@ -111,6 +111,8 @@ export interface Project {
   updatedBy?: string;
   updatedAt?: string;
   createdAt?: string;
+  userId?: string;
+  assigneeId?: string;
 }
 
 export interface OverdueMilestoneItem {

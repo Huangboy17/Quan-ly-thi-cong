@@ -709,9 +709,14 @@ export default function App() {
   };
 
   const handleImportExcelProjects = (imported: Project[]) => {
-    const next = [...imported, ...projects];
+    const enriched = imported.map((p) => ({
+      ...p,
+      userId: p.userId || (userProfile?.accountType === 'level_2' ? userProfile.parentId : userProfile?.id),
+      assigneeId: p.assigneeId || (userProfile?.accountType === 'level_2' ? userProfile.id : undefined),
+    }));
+    const next = [...enriched, ...projects];
     setProjects(next);
-    sbUpsertMany(imported).catch((e) =>
+    sbUpsertMany(enriched).catch((e) =>
       console.error('❌ Lỗi đồng bộ projects import từ Excel:', e)
     );
     showToast(`Đã import thành công ${imported.length} hợp đồng từ Excel!`);
@@ -735,9 +740,14 @@ export default function App() {
   // Bulk Operations Handlers
   const handleBulkAdd = (newItems: Project[]) => {
     if (!newItems.length) return;
-    const next = [...newItems, ...projects];
+    const enriched = newItems.map((p) => ({
+      ...p,
+      userId: p.userId || (userProfile?.accountType === 'level_2' ? userProfile.parentId : userProfile?.id),
+      assigneeId: p.assigneeId || (userProfile?.accountType === 'level_2' ? userProfile.id : undefined),
+    }));
+    const next = [...enriched, ...projects];
     setProjects(next);
-    sbUpsertMany(newItems).catch((e) =>
+    sbUpsertMany(enriched).catch((e) =>
       console.error('❌ Lỗi đồng bộ bulk projects lên Supabase:', e)
     );
     showToast(`Đã thêm thành công ${newItems.length} hợp đồng mới vào hệ thống!`);
@@ -840,6 +850,8 @@ export default function App() {
         paymentBatches: [],
         createdAt: now,
         updatedAt: now,
+        userId: orig.userId || (userProfile?.accountType === 'level_2' ? userProfile.parentId : userProfile?.id),
+        assigneeId: orig.assigneeId || (userProfile?.accountType === 'level_2' ? userProfile.id : undefined),
       };
     });
 
@@ -1144,6 +1156,7 @@ export default function App() {
         project={editingProject}
         onClose={() => setIsAddEditModalOpen(false)}
         onSave={handleSaveProject}
+        currentUserProfile={userProfile}
       />
 
       <PaymentModal

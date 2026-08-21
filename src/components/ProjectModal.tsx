@@ -49,6 +49,7 @@ interface ProjectModalProps {
   project: Project | null;
   onClose: () => void;
   onSave: (project: Project) => void;
+  currentUserProfile: any; // Using any or importing UserProfile
 }
 
 const emptyMilestones = (): ProjectMilestones => {
@@ -80,6 +81,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
   project,
   onClose,
   onSave,
+  currentUserProfile,
 }) => {
   // Section 1: Basic Contract Info
   const [soHopDong, setSoHopDong] = useState('');
@@ -560,6 +562,8 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
       ghiChu,
       updatedBy: cleanAuthor,
       updatedAt: new Date().toISOString(),
+      userId: project ? project.userId : (currentUserProfile?.accountType === 'level_2' ? currentUserProfile.parentId : currentUserProfile?.id),
+      assigneeId: project ? project.assigneeId : (currentUserProfile?.accountType === 'level_2' ? currentUserProfile.id : null),
     };
 
     onSave(updatedProject);

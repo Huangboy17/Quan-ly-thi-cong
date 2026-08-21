@@ -408,6 +408,8 @@ function mapDbRowToProject(row: any): Project {
     updatedBy: row.updated_by ?? '',
     updatedAt: row.updated_at ?? '',
     createdAt: row.created_at ?? '',
+    userId: row.user_id ?? '',
+    assigneeId: row.assignee_id ?? '',
   };
 }
 
@@ -450,6 +452,8 @@ function mapProjectToDbRow(p: Project): Record<string, any> {
     ghi_chu: p.ghiChu ?? '',
     updated_by: p.updatedBy ?? '',
     updated_at: p.updatedAt || new Date().toISOString(),
+    user_id: p.userId || null,
+    assignee_id: p.assigneeId || null,
   };
 
   if (p.createdAt) {
