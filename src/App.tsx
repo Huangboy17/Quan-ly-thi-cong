@@ -583,10 +583,14 @@ export default function App() {
     
     // Cập nhật state UI trước
     setProjects(next);
+    setSelectedContractId('ALL');
+    setGlobalFilter((prev) => ({ ...prev, duAn: 'ALL' }));
+
     // Chỉ lưu duy nhất dự án này lên Supabase thay vì ghi đè tất cả
-    sbUpsertProject(p).catch((e) =>
-      console.error('❌ Lỗi đồng bộ project lên Supabase:', e)
-    );
+    sbUpsertProject(p).catch((e) => {
+      console.error('❌ Lỗi đồng bộ project lên Supabase:', e);
+      showToast('Có lỗi khi lưu vào cơ sở dữ liệu! Vui lòng kiểm tra kết nối hoặc Supabase.', 'error');
+    });
   };
 
   const handleDeleteProject = (id: string) => {
