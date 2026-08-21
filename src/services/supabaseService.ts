@@ -407,11 +407,12 @@ function mapDbRowToProject(row: any): Project {
     ghiChu: row.ghi_chu ?? '',
     updatedBy: row.updated_by ?? '',
     updatedAt: row.updated_at ?? '',
+    createdAt: row.created_at ?? '',
   };
 }
 
 function mapProjectToDbRow(p: Project): Record<string, any> {
-  return {
+  const row: Record<string, any> = {
     id: p.id,
     so_hop_dong: p.soHopDong ?? '',
     ma_cong_trinh: p.maCongTrinh ?? '',
@@ -449,8 +450,12 @@ function mapProjectToDbRow(p: Project): Record<string, any> {
     ghi_chu: p.ghiChu ?? '',
     updated_by: p.updatedBy ?? '',
     updated_at: p.updatedAt || new Date().toISOString(),
-    created_at: new Date().toISOString(),
   };
+
+  if (p.createdAt) {
+    row.created_at = p.createdAt;
+  }
+  return row;
 }
 
 function mapDbRowToLog(row: any): BchActivityLog {

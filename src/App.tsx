@@ -497,14 +497,6 @@ export default function App() {
     sbInsertLog(newLog).catch((e) => console.error('❌ Lỗi lưu log:', e));
   };
 
-  // Save projects — ghi vào Supabase (thay localStorage)
-  const saveProjects = (newProjects: Project[]) => {
-    setProjects(newProjects);
-    // Đồng bộ toàn bộ lên Supabase
-    sbUpsertMany(newProjects).catch((e) =>
-      console.error('❌ Lỗi đồng bộ projects lên Supabase:', e)
-    );
-  };
 
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
     setToast({ message, type, isVisible: true });
@@ -588,7 +580,13 @@ export default function App() {
         diffSummary: `Tạo mới HĐ ${p.soHopDong} | Phân bổ ${p.nhomChiPhi || '-'}`,
       });
     }
-    saveProjects(next);
+    
+    // Cập nhật state UI trước
+    setProjects(next);
+    // Chỉ lưu duy nhất dự án này lên Supabase thay vì ghi đè tất cả
+    sbUpsertProject(p).catch((e) =>
+      console.error('❌ Lỗi đồng bộ project lên Supabase:', e)
+    );
   };
 
   const handleDeleteProject = (id: string) => {
@@ -684,7 +682,15 @@ export default function App() {
       return p;
     });
 
-    saveProjects(next);
+    // Tìm dự án được cập nhật
+    const updatedProject = next.find((p) => p.id === projectId);
+    setProjects(next);
+    
+    if (updatedProject) {
+      sbUpsertProject(updatedProject).catch((e) =>
+        console.error('❌ Lỗi đồng bộ project sau khi thanh toán:', e)
+      );
+    }
     showToast(`Đã ghi nhận đợt thanh toán "${batch.tenDot}" thành công!`);
 
     logBchAction({
@@ -704,7 +710,10 @@ export default function App() {
 
   const handleImportExcelProjects = (imported: Project[]) => {
     const next = [...imported, ...projects];
-    saveProjects(next);
+    setProjects(next);
+    sbUpsertMany(imported).catch((e) =>
+      console.error('❌ Lỗi đồng bộ projects import từ Excel:', e)
+    );
     showToast(`Đã import thành công ${imported.length} hợp đồng từ Excel!`);
 
     logBchAction({
@@ -727,7 +736,10 @@ export default function App() {
   const handleBulkAdd = (newItems: Project[]) => {
     if (!newItems.length) return;
     const next = [...newItems, ...projects];
-    saveProjects(next);
+    setProjects(next);
+    sbUpsertMany(newItems).catch((e) =>
+      console.error('❌ Lỗi đồng bộ bulk projects lên Supabase:', e)
+    );
     showToast(`Đã thêm thành công ${newItems.length} hợp đồng mới vào hệ thống!`);
 
     const officerName = userProfile?.fullName || 'Cán bộ BCH Công Trường';
@@ -784,7 +796,11 @@ export default function App() {
       return p;
     });
 
-    saveProjects(next);
+    const updatedItems = next.filter((p) => projectIds.includes(p.id));
+    setProjects(next);
+    sbUpsertMany(updatedItems).catch((e) =>
+      console.error('❌ Lỗi đồng bộ bulk update lên Supabase:', e)
+    );
     showToast(`Đã cập nhật hàng loạt ${projectIds.length} hợp đồng thành công!`);
 
     const officerName = userProfile?.fullName || 'Cán bộ Ban Chỉ Huy';
@@ -828,7 +844,10 @@ export default function App() {
     });
 
     const next = [...duplicates, ...projects];
-    saveProjects(next);
+    setProjects(next);
+    sbUpsertMany(duplicates).catch((e) =>
+      console.error('❌ Lỗi đồng bộ bulk duplicate lên Supabase:', e)
+    );
     showToast(`Đã nhân bản ${duplicates.length} hợp đồng thành công!`);
 
     const officerName = userProfile?.fullName || 'Cán bộ Ban Chỉ Huy';
@@ -858,12 +877,20 @@ export default function App() {
 
     if (masterIdxCurrent === -1 || masterIdxTarget === -1) return;
 
-    const updatedProjects = [...projects];
-    const temp = updatedProjects[masterIdxCurrent];
-    updatedProjects[masterIdxCurrent] = updatedProjects[masterIdxTarget];
-    updatedProjects[masterIdxTarget] = temp;
+    const currentCreatedAt = projects[masterIdxCurrent].createdAt || new Date().toISOString();
+    const targetCreatedAt = projects[masterIdxTarget].createdAt || new Date().toISOString();
 
-    saveProjects(updatedProjects);
+    const updatedProjects = [...projects];
+    const tempCurrent = { ...updatedProjects[masterIdxCurrent], createdAt: targetCreatedAt };
+    const tempTarget = { ...updatedProjects[masterIdxTarget], createdAt: currentCreatedAt };
+
+    updatedProjects[masterIdxCurrent] = tempTarget;
+    updatedProjects[masterIdxTarget] = tempCurrent;
+
+    setProjects(updatedProjects);
+    sbUpsertMany([tempCurrent, tempTarget]).catch((e) =>
+      console.error('❌ Lỗi đồng bộ hoán đổi vị trí project:', e)
+    );
   };
 
   const handleQuickExportPdf = async () => {

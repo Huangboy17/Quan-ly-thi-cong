@@ -110,6 +110,7 @@ export interface Project {
   ghiChu?: string;
   updatedBy?: string;
   updatedAt?: string;
+  createdAt?: string;
 }
 
 export interface OverdueMilestoneItem {
